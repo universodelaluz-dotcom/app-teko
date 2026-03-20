@@ -1016,7 +1016,10 @@ class CarJumpView @JvmOverloads constructor(
     private fun updateEnemies(deltaSeconds: Float) {
         if (bossEnemy.active) return
         enemyShips.forEach { enemy ->
+            enemy.time += deltaSeconds
             enemy.y += enemy.speed * deltaSeconds
+            enemy.x += sin(enemy.time * enemy.waveSpeed) * enemy.waveAmplitude * deltaSeconds * 4f
+            enemy.x = enemy.x.coerceIn(enemy.width * 0.6f, width - enemy.width * 0.6f)
             enemy.shotCooldown = (enemy.shotCooldown - deltaSeconds).coerceAtLeast(0f)
             if (enemy.y - enemy.height > height) resetEnemy(enemy, true)
 
