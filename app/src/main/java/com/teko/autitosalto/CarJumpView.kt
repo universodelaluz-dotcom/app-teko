@@ -1637,10 +1637,16 @@ class CarJumpView @JvmOverloads constructor(
 
     private fun spawnBossLaser() {
         val originY = bossEnemy.y + bossEnemy.height * 0.45f
-        val count = 10 + currentLevel.number * 2
+        val count = 5 + currentLevel.number / 2
+        val sweepRight = Random.nextBoolean()
+        val startX = if (sweepRight) width * 0.04f else width * 0.52f
+        val endX   = if (sweepRight) width * 0.48f else width * 0.96f
+        val speed  = height * (0.85f + currentLevel.number * 0.06f)
         repeat(count) { i ->
-            val x = width * (i.toFloat() / (count - 1).coerceAtLeast(1))
-            spawnEnemyShot(x, originY, 0f, height * (1.9f + currentLevel.number * 0.08f), width * 0.007f, 1.2f, true, shotType = 1)
+            val fraction = i.toFloat() / (count - 1).coerceAtLeast(1)
+            val x = startX + (endX - startX) * fraction
+            val vx = (if (sweepRight) 1f else -1f) * width * 0.04f * fraction
+            spawnEnemyShot(x, originY, vx, speed, width * 0.011f, 1.8f, true, shotType = 1)
         }
     }
 
