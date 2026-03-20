@@ -457,18 +457,19 @@ class CarJumpView @JvmOverloads constructor(
         proModeButton.set(left, top + buttonHeight + spacing, left + buttonWidth, top + buttonHeight * 2f + spacing)
         testModeButton.set(left, proModeButton.bottom + spacing, left + buttonWidth, proModeButton.bottom + spacing + buttonHeight)
 
-        val testToggleTop = height * 0.3f
-        val toggleWidth = width * 0.33f
-        val toggleHeight = height * 0.092f
-        testKidsButton.set(width * 0.1f, testToggleTop, width * 0.1f + toggleWidth, testToggleTop + toggleHeight)
-        testProButton.set(width * 0.57f, testToggleTop, width * 0.57f + toggleWidth, testToggleTop + toggleHeight)
+        val toggleGap = width * 0.03f
+        val toggleWidth = (width - toggleGap * 3f) * 0.5f
+        val toggleHeight = height * 0.115f
+        val testToggleTop = height * 0.27f
+        testKidsButton.set(toggleGap, testToggleTop, toggleGap + toggleWidth, testToggleTop + toggleHeight)
+        testProButton.set(toggleGap * 2f + toggleWidth, testToggleTop, toggleGap * 2f + toggleWidth * 2f, testToggleTop + toggleHeight)
 
         val missionColumns = 3
-        val missionTop = height * 0.34f
+        val missionTop = testToggleTop + toggleHeight + height * 0.022f
         val missionGapX = width * 0.03f
-        val missionGapY = height * 0.018f
+        val missionGapY = height * 0.015f
         val missionWidth = width * 0.26f
-        val missionHeight = height * 0.088f
+        val missionHeight = height * 0.082f
         val missionStartLeft = width * 0.08f
         testMissionButtons.forEachIndexed { index, rect ->
             val row = index / missionColumns
@@ -477,7 +478,7 @@ class CarJumpView @JvmOverloads constructor(
             val rectTop = missionTop + row * (missionHeight + missionGapY)
             rect.set(rectLeft, rectTop, rectLeft + missionWidth, rectTop + missionHeight)
         }
-        testBackButton.set(width * 0.2f, height * 0.81f, width * 0.8f, height * 0.905f)
+        testBackButton.set(width * 0.2f, height * 0.83f, width * 0.8f, height * 0.92f)
         coverStrokePaint.strokeWidth = width * 0.006f
     }
 
