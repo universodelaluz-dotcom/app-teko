@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.AutoBebe" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:windowBackground">#A8E6FF</item>
+        <item name="android:statusBarColor">#A8E6FF</item>
+        <item name="android:navigationBarColor">#5E5E5E</item>
+    </style>
+</resources>
