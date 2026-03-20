@@ -550,6 +550,7 @@ class CarJumpView @JvmOverloads constructor(
         bossEnemy.attackTime = 0f
         bossEnemy.rechargeTime = 0f
         bossEnemy.vulnerable = false
+        bossEnemy.attackPhase = 0
         bossSpawned = false
         bossDefeated = false
         levelClearTimer = 0f
@@ -1137,8 +1138,20 @@ class CarJumpView @JvmOverloads constructor(
         bossEnemy.attackTime = (bossEnemy.attackTime - deltaSeconds).coerceAtLeast(0f)
         bossEnemy.vulnerable = false
         if (bossEnemy.shotCooldown <= 0f) {
-            bossEnemy.shotCooldown = missionBossVolleyCooldown(currentLevel)
-            spawnBossVolley()
+            val attackTypes = when {
+                currentLevel.number >= 7 -> 4
+                currentLevel.number >= 5 -> 3
+                currentLevel.number >= 3 -> 2
+                else -> 1
+            }
+            when (bossEnemy.attackPhase % attackTypes) {
+                0 -> { bossEnemy.shotCooldown = missionBossVolleyCooldown(currentLevel); spawnBossVolley() }
+                1 -> { bossEnemy.shotCooldown = missionBossVolleyCooldown(currentLevel) * 1.4f; spawnBossLaser() }
+                2 -> { bossEnemy.shotCooldown = missionBossVolleyCooldown(currentLevel) * 2f; spawnBossHomingMissiles() }
+                3 -> { bossEnemy.shotCooldown = missionBossVolleyCooldown(currentLevel) * 2.5f; spawnBossBombs() }
+                else -> { bossEnemy.shotCooldown = missionBossVolleyCooldown(currentLevel); spawnBossVolley() }
+            }
+            bossEnemy.attackPhase++
         }
         if (bossEnemy.attackTime <= 0f) {
             bossEnemy.rechargeTime = missionBossRechargeWindow(currentLevel)
@@ -1212,6 +1225,17 @@ class CarJumpView @JvmOverloads constructor(
         val rocketRect = rocketBounds()
         enemyShots.forEach { shot ->
             if (!shot.active) return@forEach
+            if (shot.shotType == 2) {
+                val dx = rocketX - shot.x
+                val dy = rocketY - shot.y
+                val dist = Math.sqrt((dx * dx + dy * dy).toDouble()).toFloat().coerceAtLeast(1f)
+                val turn = width * 1.1f * deltaSeconds
+                shot.vx += dx / dist * turn
+                shot.vy += dy / dist * turn
+                val speed = Math.sqrt((shot.vx * shot.vx + shot.vy * shot.vy).toDouble()).toFloat()
+                val maxSpeed = height * 0.6f
+                if (speed > maxSpeed) { shot.vx = shot.vx / speed * maxSpeed; shot.vy = shot.vy / speed * maxSpeed }
+            }
             shot.x += shot.vx * deltaSeconds
             shot.y += shot.vy * deltaSeconds
             shot.life -= deltaSeconds
@@ -1222,7 +1246,19 @@ class CarJumpView @JvmOverloads constructor(
                 applyRocketDamage()
                 return@forEach
             }
-            if (shot.life <= 0f || shot.y - shot.radius > height) shot.active = false
+            if (shot.life <= 0f || shot.y - shot.radius > height || shot.x < -shot.radius * 2 || shot.x > width + shot.radius * 2) {
+                if (shot.shotType == 3 && shot.life <= 0f) {
+                    repeat(8) { i ->
+                        val angle = i * 45.0
+                        val rad = Math.toRadians(angle)
+                        val spd = height * 0.38f
+                        spawnEnemyShot(shot.x, shot.y, cos(rad).toFloat() * spd, sin(rad).toFloat() * spd, width * 0.012f, 1.6f, true)
+                    }
+                    flashTime = max(flashTime, 0.1f)
+                    repeat(14) { spawnParticle(shot.x, shot.y, width * (0.1f + Random.nextFloat() * 0.3f), Random.nextFloat() * 360f, 0.2f + Random.nextFloat() * 0.3f, width * 0.006f, listOf(Color.parseColor("#FF6E40"), Color.parseColor("#FFD180"), Color.WHITE).random()) }
+                }
+                shot.active = false
+            }
         }
     }
 
@@ -1598,6 +1634,33 @@ class CarJumpView @JvmOverloads constructor(
         }
     }
 
+    private fun spawnBossLaser() {
+        val originY = bossEnemy.y + bossEnemy.height * 0.45f
+        val count = 10 + currentLevel.number * 2
+        repeat(count) { i ->
+            val x = width * (i.toFloat() / (count - 1).coerceAtLeast(1))
+            spawnEnemyShot(x, originY, 0f, height * (1.9f + currentLevel.number * 0.08f), width * 0.007f, 1.2f, true, shotType = 1)
+        }
+    }
+
+    private fun spawnBossHomingMissiles() {
+        val count = (2 + currentLevel.number / 3).coerceAtMost(5)
+        repeat(count) {
+            val ox = bossEnemy.x + (Random.nextFloat() - 0.5f) * bossEnemy.width * 0.6f
+            val oy = bossEnemy.y + bossEnemy.height * 0.45f
+            spawnEnemyShot(ox, oy, (rocketX - ox) * 0.25f, height * 0.28f, width * 0.02f, 4.5f, true, shotType = 2)
+        }
+    }
+
+    private fun spawnBossBombs() {
+        val count = (1 + currentLevel.number / 4).coerceAtMost(3)
+        repeat(count) {
+            val ox = bossEnemy.x + (Random.nextFloat() - 0.5f) * bossEnemy.width * 0.5f
+            val oy = bossEnemy.y + bossEnemy.height * 0.45f
+            spawnEnemyShot(ox, oy, (rocketX - ox) * 0.12f, height * 0.22f, width * 0.033f, 2.4f, true, shotType = 3)
+        }
+    }
+
     private fun isHazard(kind: SpaceKind): Boolean {
         return kind == SpaceKind.ROCK || kind == SpaceKind.COMET
     }
@@ -1616,7 +1679,8 @@ class CarJumpView @JvmOverloads constructor(
         velocityY: Float,
         radius: Float,
         life: Float,
-        isBoss: Boolean
+        isBoss: Boolean,
+        shotType: Int = 0
     ) {
         val shot = enemyShots.firstOrNull { !it.active } ?: return
         shot.active = true
@@ -1627,6 +1691,7 @@ class CarJumpView @JvmOverloads constructor(
         shot.radius = radius
         shot.life = life
         shot.isBoss = isBoss
+        shot.shotType = shotType
     }
 
     private fun spawnAbsorptionShard(originX: Float, originY: Float, radius: Float, index: Int) {
@@ -1889,15 +1954,41 @@ class CarJumpView @JvmOverloads constructor(
     private fun drawEnemyShots(canvas: Canvas) {
         enemyShots.forEach { shot ->
             if (!shot.active) return@forEach
-            if (shot.isBoss) {
-                enemyShotGlowPaint.color = Color.argb(150, 255, 170, 90)
-                enemyShotPaint.color = Color.parseColor("#FFD180")
-            } else {
-                enemyShotGlowPaint.color = Color.argb(110, 255, 120, 120)
-                enemyShotPaint.color = Color.parseColor("#FF6E6E")
+            when (shot.shotType) {
+                1 -> { // laser: línea delgada cian
+                    enemyShotGlowPaint.color = Color.argb(160, 0, 230, 255)
+                    enemyShotPaint.color = Color.parseColor("#00E5FF")
+                    canvas.drawCircle(shot.x, shot.y, shot.radius * 2.4f, enemyShotGlowPaint)
+                    canvas.drawRoundRect(RectF(shot.x - shot.radius * 0.5f, shot.y - shot.radius * 3.5f, shot.x + shot.radius * 0.5f, shot.y + shot.radius * 3.5f), shot.radius, shot.radius, enemyShotPaint)
+                }
+                2 -> { // homing: naranja con pulso
+                    enemyShotGlowPaint.color = Color.argb(180, 255, 100, 0)
+                    enemyShotPaint.color = Color.parseColor("#FF6D00")
+                    canvas.drawCircle(shot.x, shot.y, shot.radius * 2.2f, enemyShotGlowPaint)
+                    canvas.drawCircle(shot.x, shot.y, shot.radius, enemyShotPaint)
+                    enemyShotPaint.color = Color.parseColor("#FFD180")
+                    canvas.drawCircle(shot.x, shot.y, shot.radius * 0.45f, enemyShotPaint)
+                }
+                3 -> { // bomba: grande roja con anillo pulsante
+                    enemyShotGlowPaint.color = Color.argb(170, 200, 0, 0)
+                    enemyShotPaint.color = Color.parseColor("#D50000")
+                    canvas.drawCircle(shot.x, shot.y, shot.radius * 2.6f, enemyShotGlowPaint)
+                    canvas.drawCircle(shot.x, shot.y, shot.radius, enemyShotPaint)
+                    enemyShotPaint.color = Color.parseColor("#FF6E40")
+                    canvas.drawCircle(shot.x, shot.y, shot.radius * 0.5f, enemyShotPaint)
+                }
+                else -> { // normal
+                    if (shot.isBoss) {
+                        enemyShotGlowPaint.color = Color.argb(150, 255, 170, 90)
+                        enemyShotPaint.color = Color.parseColor("#FFD180")
+                    } else {
+                        enemyShotGlowPaint.color = Color.argb(110, 255, 120, 120)
+                        enemyShotPaint.color = Color.parseColor("#FF6E6E")
+                    }
+                    canvas.drawCircle(shot.x, shot.y, shot.radius * 1.9f, enemyShotGlowPaint)
+                    canvas.drawCircle(shot.x, shot.y, shot.radius, enemyShotPaint)
+                }
             }
-            canvas.drawCircle(shot.x, shot.y, shot.radius * 1.9f, enemyShotGlowPaint)
-            canvas.drawCircle(shot.x, shot.y, shot.radius, enemyShotPaint)
         }
     }
 
@@ -2403,6 +2494,7 @@ class CarJumpView @JvmOverloads constructor(
         var rechargeTime: Float = 0f,
         var vulnerable: Boolean = false,
         var time: Float = 0f,
+        var attackPhase: Int = 0,
         var active: Boolean = false
     )
 
@@ -2437,6 +2529,7 @@ class CarJumpView @JvmOverloads constructor(
         var life: Float = 0f,
         var radius: Float = 0f,
         var isBoss: Boolean = false,
+        var shotType: Int = 0, // 0=normal 1=laser 2=homing 3=bomb
         var active: Boolean = false
     )
 
