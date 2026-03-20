@@ -1824,7 +1824,7 @@ class CarJumpView @JvmOverloads constructor(
         enemyShips.forEach { enemy ->
             canvas.save()
             canvas.translate(enemy.x, enemy.y)
-            canvas.rotate(90f)
+            canvas.rotate(180f)
             canvas.drawBitmap(enemyBitmap, null, RectF(-enemy.width * 0.6f, -enemy.height * 0.6f, enemy.width * 0.6f, enemy.height * 0.6f), null)
             canvas.restore()
         }
