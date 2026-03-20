@@ -1822,11 +1822,7 @@ class CarJumpView @JvmOverloads constructor(
     private fun drawEnemyShips(canvas: Canvas) {
         val enemyBitmap = currentEnemyBitmap
         enemyShips.forEach { enemy ->
-            canvas.save()
-            canvas.translate(enemy.x, enemy.y)
-            canvas.rotate(180f)
-            canvas.drawBitmap(enemyBitmap, null, RectF(-enemy.width * 0.6f, -enemy.height * 0.6f, enemy.width * 0.6f, enemy.height * 0.6f), null)
-            canvas.restore()
+            canvas.drawBitmap(enemyBitmap, null, RectF(enemy.x - enemy.width * 0.6f, enemy.y - enemy.height * 0.6f, enemy.x + enemy.width * 0.6f, enemy.y + enemy.height * 0.6f), null)
         }
     }
 
