@@ -1614,8 +1614,15 @@ class CarJumpView @JvmOverloads constructor(
         )
     }
 
+    private fun spawnMuzzleFlash(x: Float, y: Float) {
+        repeat(6) {
+            spawnParticle(x, y, width * (0.3f + Random.nextFloat() * 0.4f), Random.nextFloat() * 360f, 0.18f + Random.nextFloat() * 0.12f, width * 0.018f, Color.parseColor("#FFE57F"))
+        }
+    }
+
     private fun spawnBossVolley() {
-        val originY = bossEnemy.y + bossEnemy.height * 0.45f
+        val originY = bossEnemy.y + bossEnemy.width * 0.35f
+        spawnMuzzleFlash(bossEnemy.x, originY)
         val spreadTargets = when {
             currentLevel.number >= 6 -> listOf(-0.38f, -0.28f, -0.18f, -0.08f, 0f, 0.08f, 0.18f, 0.28f, 0.38f)
             currentLevel.number >= 4 -> listOf(-0.34f, -0.22f, -0.12f, -0.04f, 0.04f, 0.12f, 0.22f, 0.34f)
@@ -1637,7 +1644,8 @@ class CarJumpView @JvmOverloads constructor(
 
     private fun spawnBossLaser() {
         val originX = bossEnemy.x
-        val originY = bossEnemy.y + bossEnemy.height * 0.45f
+        val originY = bossEnemy.y + bossEnemy.width * 0.35f
+        spawnMuzzleFlash(originX, originY)
         val count = 5 + currentLevel.number / 2
         val vy = height * (0.85f + currentLevel.number * 0.055f)
         val sweepRight = Random.nextBoolean()
@@ -1650,18 +1658,20 @@ class CarJumpView @JvmOverloads constructor(
 
     private fun spawnBossHomingMissiles() {
         val count = (2 + currentLevel.number / 3).coerceAtMost(5)
+        spawnMuzzleFlash(bossEnemy.x, bossEnemy.y + bossEnemy.width * 0.35f)
         repeat(count) {
             val ox = bossEnemy.x + (Random.nextFloat() - 0.5f) * bossEnemy.width * 0.6f
-            val oy = bossEnemy.y + bossEnemy.height * 0.45f
+            val oy = bossEnemy.y + bossEnemy.width * 0.35f
             spawnEnemyShot(ox, oy, (rocketX - ox) * 0.25f, height * 0.28f, width * 0.02f, 4.5f, true, shotType = 2)
         }
     }
 
     private fun spawnBossBombs() {
         val count = (1 + currentLevel.number / 4).coerceAtMost(3)
+        spawnMuzzleFlash(bossEnemy.x, bossEnemy.y + bossEnemy.width * 0.35f)
         repeat(count) {
             val ox = bossEnemy.x + (Random.nextFloat() - 0.5f) * bossEnemy.width * 0.5f
-            val oy = bossEnemy.y + bossEnemy.height * 0.45f
+            val oy = bossEnemy.y + bossEnemy.width * 0.35f
             spawnEnemyShot(ox, oy, (rocketX - ox) * 0.12f, height * 0.22f, width * 0.033f, 2.4f, true, shotType = 3)
         }
     }
