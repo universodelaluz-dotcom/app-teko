@@ -180,12 +180,7 @@ class CarJumpView @JvmOverloads constructor(
         Level.TWELVE.number to R.drawable.mission_level_12
     )
     private val stageBitmaps = stageBackgroundMap.mapValues { (_, resId) ->
-        decodeBitmapResource(resId).let { original ->
-            val matrix = Matrix().apply { postRotate(90f) }
-            val rotated = Bitmap.createBitmap(original, 0, 0, original.width, original.height, matrix, true)
-            original.recycle()
-            rotated
-        }
+        decodeBitmapResource(resId)
     }
     private val currentStageBitmap: Bitmap
         get() = stageBitmaps[currentLevel.number] ?: stageBitmaps[Level.ONE.number]!!
@@ -1849,11 +1844,7 @@ class CarJumpView @JvmOverloads constructor(
                 pulsePaint
             )
         }
-        canvas.save()
-        canvas.translate(bossEnemy.x, bossEnemy.y)
-        canvas.rotate(90f)
-        canvas.drawBitmap(bossBitmap, null, RectF(-halfWidth, -halfHeight, halfWidth, halfHeight), null)
-        canvas.restore()
+        canvas.drawBitmap(bossBitmap, null, RectF(bossEnemy.x - halfWidth, bossEnemy.y - halfHeight, bossEnemy.x + halfWidth, bossEnemy.y + halfHeight), null)
     }
 
     private fun drawParticles(canvas: Canvas) {
@@ -1942,7 +1933,6 @@ class CarJumpView @JvmOverloads constructor(
                 shieldOverlayPaint
             )
         }
-        canvas.rotate(-90f)
         canvas.drawBitmap(rocketBitmap, null, RectF(-rocketWidth * 0.5f, -rocketHeight * 0.5f, rocketWidth * 0.5f, rocketHeight * 0.5f), null)
         if (turboTime > 0f || absorptions.any { it.active } || firingActive || damageShieldTime > 0f) {
             pulsePaint.color = when {
