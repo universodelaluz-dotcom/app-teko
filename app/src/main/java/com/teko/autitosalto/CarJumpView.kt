@@ -311,6 +311,15 @@ class CarJumpView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (screenState == ScreenState.PAUSED) {
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                lastFrameTime = 0L
+                screenState = ScreenState.PLAYING
+                resumeGameAudio()
+            }
+            return true
+        }
+
         if (screenState != ScreenState.PLAYING) {
             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                 if (screenState == ScreenState.LEVEL_CLEAR) {
@@ -324,12 +333,6 @@ class CarJumpView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                if (screenState == ScreenState.PAUSED) {
-                    lastFrameTime = 0L
-                    screenState = ScreenState.PLAYING
-                    resumeGameAudio()
-                    return true
-                }
                 if (pauseButton.contains(event.x, event.y)) {
                     screenState = ScreenState.PAUSED
                     touchActive = false
@@ -345,7 +348,6 @@ class CarJumpView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                if (screenState == ScreenState.PAUSED) return true
                 touchActive = true
                 firingActive = true
                 updateTargetFromTouch(event.x, event.y)
