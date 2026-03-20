@@ -275,6 +275,7 @@ class CarJumpView @JvmOverloads constructor(
     private var testLaunchMode = GameMode.PRO
     private var levelElapsedTime = 0f
     private var screenState = ScreenState.COVER
+    private val pauseButton = RectF()
     private var bossSpawned = false
     private var bossDefeated = false
     private var levelClearTimer = 0f
@@ -303,6 +304,8 @@ class CarJumpView @JvmOverloads constructor(
             Shader.TileMode.CLAMP
         )
         ringPaint.strokeWidth = min(w, h) * 0.012f
+        val pbSize = w * 0.09f
+        pauseButton.set(w * 0.955f - pbSize, h * 0.036f, w * 0.955f, h * 0.036f + pbSize)
         updateCoverButtons()
         initializeGame()
     }
@@ -321,6 +324,19 @@ class CarJumpView @JvmOverloads constructor(
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                if (screenState == ScreenState.PAUSED) {
+                    lastFrameTime = 0L
+                    screenState = ScreenState.PLAYING
+                    resumeGameAudio()
+                    return true
+                }
+                if (pauseButton.contains(event.x, event.y)) {
+                    screenState = ScreenState.PAUSED
+                    touchActive = false
+                    firingActive = false
+                    pauseGameAudio()
+                    return true
+                }
                 touchActive = true
                 firingActive = true
                 updateTargetFromTouch(event.x, event.y)
@@ -329,6 +345,7 @@ class CarJumpView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
+                if (screenState == ScreenState.PAUSED) return true
                 touchActive = true
                 firingActive = true
                 updateTargetFromTouch(event.x, event.y)
@@ -354,6 +371,7 @@ class CarJumpView @JvmOverloads constructor(
         when (screenState) {
             ScreenState.PLAYING -> updateGame(deltaSeconds)
             ScreenState.COVER, ScreenState.TEST_MODE, ScreenState.GAME_OVER, ScreenState.LEVEL_CLEAR -> updateCoverAmbient(deltaSeconds)
+            ScreenState.PAUSED -> Unit
         }
         drawGame(canvas)
         when (screenState) {
@@ -361,6 +379,7 @@ class CarJumpView @JvmOverloads constructor(
             ScreenState.TEST_MODE -> drawTestMode(canvas)
             ScreenState.GAME_OVER -> drawGameOver(canvas)
             ScreenState.LEVEL_CLEAR -> drawLevelClear(canvas)
+            ScreenState.PAUSED -> drawPauseOverlay(canvas)
             ScreenState.PLAYING -> Unit
         }
         postInvalidateOnAnimation()
@@ -1621,7 +1640,7 @@ class CarJumpView @JvmOverloads constructor(
     }
 
     private fun spawnBossVolley() {
-        val originY = bossEnemy.y + bossEnemy.width * 0.35f
+        val originY = bossEnemy.y + bossEnemy.width * 0.1f
         spawnMuzzleFlash(bossEnemy.x, originY)
         val spreadTargets = when {
             currentLevel.number >= 6 -> listOf(-0.38f, -0.28f, -0.18f, -0.08f, 0f, 0.08f, 0.18f, 0.28f, 0.38f)
@@ -1633,10 +1652,10 @@ class CarJumpView @JvmOverloads constructor(
             spawnEnemyShot(
                 originX = bossEnemy.x + bossEnemy.width * spread * 0.6f,
                 originY = originY,
-                velocityX = (rocketX - (bossEnemy.x + bossEnemy.width * spread * 0.6f)) * (0.4f + Random.nextFloat() * 0.2f + (currentLevel.number - 1) * 0.02f),
-                velocityY = height * (0.65f + Random.nextFloat() * 0.2f + (currentLevel.number - 1) * 0.03f),
+                velocityX = (rocketX - (bossEnemy.x + bossEnemy.width * spread * 0.6f)) * (0.28f + Random.nextFloat() * 0.14f + (currentLevel.number - 1) * 0.015f),
+                velocityY = height * (0.45f + Random.nextFloat() * 0.14f + (currentLevel.number - 1) * 0.022f),
                 radius = width * (0.02f + (currentLevel.number - 1) * 0.0008f),
-                life = 3.1f + (currentLevel.number - 1) * 0.14f,
+                life = 3.5f + (currentLevel.number - 1) * 0.14f,
                 isBoss = true
             )
         }
@@ -1644,35 +1663,35 @@ class CarJumpView @JvmOverloads constructor(
 
     private fun spawnBossLaser() {
         val originX = bossEnemy.x
-        val originY = bossEnemy.y + bossEnemy.width * 0.35f
+        val originY = bossEnemy.y + bossEnemy.width * 0.1f
         spawnMuzzleFlash(originX, originY)
         val count = 5 + currentLevel.number / 2
-        val vy = height * (0.85f + currentLevel.number * 0.055f)
+        val vy = height * (0.58f + currentLevel.number * 0.038f)
         val sweepRight = Random.nextBoolean()
         repeat(count) { i ->
             val fraction = i.toFloat() / (count - 1).coerceAtLeast(1)
-            val vx = (if (sweepRight) 1f else -1f) * width * 0.55f * fraction
-            spawnEnemyShot(originX, originY, vx, vy, width * 0.011f, 1.8f, true, shotType = 1)
+            val vx = (if (sweepRight) 1f else -1f) * width * 0.45f * fraction
+            spawnEnemyShot(originX, originY, vx, vy, width * 0.011f, 2.2f, true, shotType = 1)
         }
     }
 
     private fun spawnBossHomingMissiles() {
         val count = (2 + currentLevel.number / 3).coerceAtMost(5)
-        spawnMuzzleFlash(bossEnemy.x, bossEnemy.y + bossEnemy.width * 0.35f)
+        spawnMuzzleFlash(bossEnemy.x, bossEnemy.y + bossEnemy.width * 0.1f)
         repeat(count) {
             val ox = bossEnemy.x + (Random.nextFloat() - 0.5f) * bossEnemy.width * 0.6f
-            val oy = bossEnemy.y + bossEnemy.width * 0.35f
-            spawnEnemyShot(ox, oy, (rocketX - ox) * 0.25f, height * 0.28f, width * 0.02f, 4.5f, true, shotType = 2)
+            val oy = bossEnemy.y + bossEnemy.width * 0.1f
+            spawnEnemyShot(ox, oy, (rocketX - ox) * 0.18f, height * 0.2f, width * 0.02f, 5.5f, true, shotType = 2)
         }
     }
 
     private fun spawnBossBombs() {
         val count = (1 + currentLevel.number / 4).coerceAtMost(3)
-        spawnMuzzleFlash(bossEnemy.x, bossEnemy.y + bossEnemy.width * 0.35f)
+        spawnMuzzleFlash(bossEnemy.x, bossEnemy.y + bossEnemy.width * 0.1f)
         repeat(count) {
             val ox = bossEnemy.x + (Random.nextFloat() - 0.5f) * bossEnemy.width * 0.5f
-            val oy = bossEnemy.y + bossEnemy.width * 0.35f
-            spawnEnemyShot(ox, oy, (rocketX - ox) * 0.12f, height * 0.22f, width * 0.033f, 2.4f, true, shotType = 3)
+            val oy = bossEnemy.y + bossEnemy.width * 0.1f
+            spawnEnemyShot(ox, oy, (rocketX - ox) * 0.09f, height * 0.16f, width * 0.033f, 3.0f, true, shotType = 3)
         }
     }
 
@@ -2099,6 +2118,33 @@ class CarJumpView @JvmOverloads constructor(
         }
         canvas.drawText(helperText, width * 0.5f, height * 0.94f, hudTextPaint)
         hudTextPaint.textAlign = Paint.Align.LEFT
+
+        // Pause button
+        pulsePaint.color = Color.argb(160, 9, 12, 40)
+        canvas.drawRoundRect(pauseButton, pauseButton.width() * 0.25f, pauseButton.width() * 0.25f, pulsePaint)
+        val barW = pauseButton.width() * 0.18f
+        val barH = pauseButton.height() * 0.52f
+        val cx = pauseButton.centerX()
+        val cy = pauseButton.centerY()
+        pulsePaint.color = Color.argb(220, 180, 200, 255)
+        canvas.drawRect(cx - barW * 1.5f, cy - barH * 0.5f, cx - barW * 0.3f, cy + barH * 0.5f, pulsePaint)
+        canvas.drawRect(cx + barW * 0.3f, cy - barH * 0.5f, cx + barW * 1.5f, cy + barH * 0.5f, pulsePaint)
+    }
+
+    private fun drawPauseOverlay(canvas: Canvas) {
+        drawHud(canvas)
+        pulsePaint.color = Color.argb(170, 5, 8, 24)
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), pulsePaint)
+        val boxW = width * 0.72f
+        val boxH = height * 0.28f
+        val boxLeft = (width - boxW) * 0.5f
+        val boxTop = (height - boxH) * 0.5f
+        pulsePaint.color = Color.argb(230, 9, 12, 40)
+        canvas.drawRoundRect(RectF(boxLeft, boxTop, boxLeft + boxW, boxTop + boxH), 40f, 40f, pulsePaint)
+        val labelSize = pixelSizeForWidth("PAUSA", boxW * 0.55f, width * 0.012f)
+        drawPixelText(canvas, "PAUSA", width * 0.5f, boxTop + boxH * 0.38f, labelSize, Color.parseColor("#9BE7FF"), Paint.Align.CENTER)
+        val resumeSize = pixelSizeForWidth("toca para continuar", boxW * 0.7f, width * 0.006f)
+        drawPixelText(canvas, "toca para continuar", width * 0.5f, boxTop + boxH * 0.72f, resumeSize, Color.parseColor("#FFE082"), Paint.Align.CENTER)
     }
 
     private fun drawBossHealthBar(canvas: Canvas, topY: Float) {
@@ -2597,6 +2643,7 @@ class CarJumpView @JvmOverloads constructor(
         COVER,
         TEST_MODE,
         PLAYING,
+        PAUSED,
         GAME_OVER,
         LEVEL_CLEAR
     }
