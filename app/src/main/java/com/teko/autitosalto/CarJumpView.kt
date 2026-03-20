@@ -180,7 +180,12 @@ class CarJumpView @JvmOverloads constructor(
         Level.TWELVE.number to R.drawable.mission_level_12
     )
     private val stageBitmaps = stageBackgroundMap.mapValues { (_, resId) ->
-        decodeBitmapResource(resId)
+        decodeBitmapResource(resId).let { original ->
+            val matrix = Matrix().apply { postRotate(90f) }
+            val rotated = Bitmap.createBitmap(original, 0, 0, original.width, original.height, matrix, true)
+            original.recycle()
+            rotated
+        }
     }
     private val currentStageBitmap: Bitmap
         get() = stageBitmaps[currentLevel.number] ?: stageBitmaps[Level.ONE.number]!!
@@ -1822,7 +1827,11 @@ class CarJumpView @JvmOverloads constructor(
     private fun drawEnemyShips(canvas: Canvas) {
         val enemyBitmap = currentEnemyBitmap
         enemyShips.forEach { enemy ->
-            canvas.drawBitmap(enemyBitmap, null, RectF(enemy.x - enemy.width * 0.6f, enemy.y - enemy.height * 0.6f, enemy.x + enemy.width * 0.6f, enemy.y + enemy.height * 0.6f), null)
+            canvas.save()
+            canvas.translate(enemy.x, enemy.y)
+            canvas.rotate(90f)
+            canvas.drawBitmap(enemyBitmap, null, RectF(-enemy.width * 0.6f, -enemy.height * 0.6f, enemy.width * 0.6f, enemy.height * 0.6f), null)
+            canvas.restore()
         }
     }
 
